@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quantintel_web
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - quantnet
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quantintel_worker
+    command: celery -A app.celery_app.celery worker --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    restart: always
+    networks:
+      - quantnet
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quantintel_beat
+    command: celery -A app.celery_app.celery beat --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    restart: always
+    networks:
+      - quantnet
+
+  db:
+    image: postgres:15
+    container_name: quantintel_postgres
+    environment:
+      POSTGRES_USER: quant
+      POSTGRES_PASSWORD: quant
+      POSTGRES_DB: quantdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - quantnet
+
+  redis:
+    image: redis:7
+    container_name: quantintel_redis
+    restart: always
+    networks:
+      - quantnet
+
+volumes:
+  pgdata:
+
+networks:
+  quantnet:
