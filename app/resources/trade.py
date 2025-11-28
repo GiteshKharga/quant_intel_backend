@@ -43,5 +43,4 @@ def place_order_endpoint(order_data):
         resp = place_order(**order_data)
         return {"status": "success", "order": resp}, 200
     except Exception as e:
-        current_app.logger.exception("trade.place failed")
         return {"error": str(e)}, 400

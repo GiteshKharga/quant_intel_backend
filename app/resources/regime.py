@@ -11,8 +11,8 @@ blp = Blueprint("Regime", "regime", description="Regime detection")
 
 class RegimeQuerySchema(Schema):
     symbol = fields.Str(required=True, metadata={"description": "Ticker symbol (e.g. RELIANCE.NS)"})
-    period = fields.Str(load_default="60d", metadata={"description": "lookback period"})
-    interval = fields.Str(load_default="1d", metadata={"description": "ohlcv interval"})
+    period = fields.Str(load_default="60d", metadata={"description": "Period to fetch (e.g. 60d)"})
+    interval = fields.Str(load_default="1d", metadata={"description": "Interval (e.g. 1d)"})
 
 
 @blp.route("/regime", methods=["GET"])

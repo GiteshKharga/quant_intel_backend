@@ -1,9 +1,9 @@
 # app/celery_app.py
-from . import create_app
-from .extensions import make_celery
+from app import create_app
+from app.extensions import make_celery
 
-# Create Flask app
-app = create_app()
+_app = create_app()
+celery = make_celery(_app)
 
-# Create Celery bound to Flask app
-celery = make_celery(app)
+# import task modules here to register tasks (avoid circular imports)
+# from app.tasks import fetch  # example

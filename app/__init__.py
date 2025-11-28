@@ -54,11 +54,18 @@ def create_app():
     app.config.from_object(cfg)
 
     # Initialize celery (so tasks can see config). We keep celery object local to module app.celery_app
+       # after loading config
+    from app.extensions import make_celery
+    # create and attach celery (so other modules can import app.celery_app.celery)
     try:
-        # make_celery will be used by app.celery_app when imported
-        make_celery(app)
+        # create a celery instance attached to this app (not strictly required for web worker,
+        # but makes celery configuration available)
+        celery = make_celery(app)
+        # Optionally attach celery to app.extensions for easier access: app.extensions['celery'] = celery
+        app.extensions = getattr(app, "extensions", {})
+        app.extensions["celery"] = celery
     except Exception:
-        app.logger.exception("make_celery failed or missing")
+        app.logger.exception("Failed to initialize celery")
 
     # init extensions
     try:

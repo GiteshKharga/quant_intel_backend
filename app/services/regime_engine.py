@@ -81,7 +81,7 @@ def _get_last_prices(df):
     return df["close"].tail(30).tolist()
 
 # ---------------------------------------------------------
-# Main function
+# Main function: Market Weather + Vacuum + Storm
 # ---------------------------------------------------------
 def compute_market_weather(symbol: str, period="60d", interval="1d") -> Optional[Dict[str, Any]]:
     df = _fetch_ohlcv(symbol, period, interval)
@@ -95,11 +95,12 @@ def compute_market_weather(symbol: str, period="60d", interval="1d") -> Optional
         liq = liquidity_proxy(df)
         price = float(df["close"].iloc[-1])
 
+        # Normalization
         vol_norm = min(1.0, vol / 0.05)
         liq_norm = min(1.0, liq / 1e6)
         mom_norm = max(-1.0, min(1.0, mom * 5))
 
-        # base weather score
+        # Base weather score
         safety_score = int(
             max(0, min(1.0,
                 (1 - vol_norm) * 0.5 +
@@ -108,15 +109,16 @@ def compute_market_weather(symbol: str, period="60d", interval="1d") -> Optional
             * 100
         )
 
-        # -------------------------------------
-        # Liquidity Vacuum & Storm Risk
-        # -------------------------------------
+        # Liquidity vacuum
         vac = liquidity_vacuum_score(_get_last_volumes(df))
+
+        # Market storm predictor
         storm = storm_probability(_get_last_prices(df))
 
+        # Final risk score (higher = riskier)
         final_risk_score = 0.6 * (100 - safety_score) + 0.4 * (storm["storm_probability"] * 100)
 
-        # recommendation logic
+        # Recommendation
         if final_risk_score > 75:
             recommendation = "avoid"
         elif final_risk_score > 55:
@@ -143,3 +145,42 @@ def compute_market_weather(symbol: str, period="60d", interval="1d") -> Optional
     except Exception:
         logger.exception("Failed to compute market weather")
         return None
+
+# ---------------------------------------------------------
+# Regime Classification (used by regime endpoint)
+# ---------------------------------------------------------
+def classify_regime(symbol: str) -> Dict[str, Any]:
+    """
+    Lightweight wrapper for regime detection.
+    Uses compute_market_weather() output.
+    """
+    out = compute_market_weather(symbol, period="180d", interval="1d")
+    if not out:
+        return {"error": "No data found"}
+
+    vol = out.get("volatility", 0.0)
+    mom = out.get("momentum", 0.0)
+
+    # trend based on momentum
+    if mom > 0.02:
+        trend = "bullish"
+    elif mom < -0.02:
+        trend = "bearish"
+    else:
+        trend = "sideways"
+
+    # volatility regimes
+    if vol < 0.01:
+        volatility = "low_volatility"
+    elif vol < 0.025:
+        volatility = "medium_volatility"
+    else:
+        volatility = "high_volatility"
+
+    return {
+        "symbol": symbol,
+        "trend_regime": trend,
+        "volatility_regime": volatility,
+        "mean_return": mom,     # FIXED here
+        "volatility": vol
+    }
