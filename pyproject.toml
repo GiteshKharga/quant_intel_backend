@@ -1,0 +1,63 @@
+[project]
+name = "quantintel-backend"
+version = "1.0.0"
+description = "Quantitative Intelligence Backend API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "QuantIntel Team"}
+]
+keywords = ["flask", "api", "quantitative", "trading", "market-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "Flask>=2.2",
+    "flask-smorest",
+    "flask-caching",
+    "flask-sqlalchemy",
+    "flask-migrate",
+    "flask-limiter",
+    "flask_jwt_extended",
+    "psycopg2-binary",
+    "requests",
+    "yfinance",
+    "pandas",
+    "numpy",
+    "scipy",
+    "gunicorn",
+    "celery[redis]",
+    "redis",
+    "sentry-sdk",
+    "alembic",
+    "python-dotenv",
+    "prometheus-flask-exporter",
+    "python-json-logger",
+    "boto3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

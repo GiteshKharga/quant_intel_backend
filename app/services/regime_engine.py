@@ -7,38 +7,10 @@ from typing import Optional, Dict, Any
 import numpy as np
 import pandas as pd
 
-# Market data providers
-try:
-    import yfinance as yf
-    _HAS_YFIN = True
-except Exception:
-    _HAS_YFIN = False
-
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------
-# Fetch OHLCV
-# ---------------------------------------------------------
-def _fetch_ohlcv(symbol: str, period: str = "60d", interval: str = "1d") -> Optional[pd.DataFrame]:
-    try:
-        if _HAS_YFIN:
-            df = yf.download(symbol, period=period, interval=interval, auto_adjust=False)
-            if df.empty:
-                return None
-            df = df.rename(columns={
-                "Open": "open",
-                "High": "high",
-                "Low": "low",
-                "Close": "close",
-                "Volume": "volume"
-            })
-            return df[["open", "high", "low", "close", "volume"]]
-        else:
-            logger.warning("No market data provider")
-            return None
-    except Exception:
-        logger.exception("Failed fetching OHLCV")
-        return None
+# Reuse the working fetch function from market_weather
+from app.services.market_weather import _fetch_ohlcv
 
 # ---------------------------------------------------------
 # Indicator functions
@@ -142,4 +114,54 @@ def compute_market_weather(symbol: str, period="60d", interval="1d") -> Optional
         }
     except Exception:
         logger.exception("Failed to compute market weather")
+        return None
+
+
+# ---------------------------------------------------------
+# Regime Classification (wrapper for API)
+# ---------------------------------------------------------
+def classify_regime(symbol: str, period: str = "60d", interval: str = "1d") -> Optional[Dict[str, Any]]:
+    """
+    Classify market regime based on weather metrics.
+    Returns regime type: trending_up, trending_down, ranging, volatile
+    """
+    weather = compute_market_weather(symbol, period, interval)
+    if weather is None:
+        return None
+    
+    try:
+        momentum = weather.get("momentum", 0)
+        volatility = weather.get("volatility", 0)
+        safety_score = weather.get("market_weather_score", 50)
+        final_risk = weather.get("final_risk_score", 50)
+        
+        # Regime classification logic
+        if volatility > 0.03:
+            regime = "volatile"
+        elif momentum > 0.02:
+            regime = "trending_up"
+        elif momentum < -0.02:
+            regime = "trending_down"
+        else:
+            regime = "ranging"
+        
+        return {
+            "symbol": symbol,
+            "timestamp": weather.get("timestamp"),
+            "price": weather.get("price"),
+            "regime": regime,
+            "momentum": momentum,
+            "volatility": volatility,
+            "safety_score": safety_score,
+            "final_risk_score": final_risk,
+            "recommendation": weather.get("recommendation"),
+            "details": {
+                "atr": weather.get("atr"),
+                "liquidity": weather.get("liquidity"),
+                "liquidity_vacuum": weather.get("liquidity_vacuum"),
+                "storm_probability": weather.get("storm_probability"),
+            }
+        }
+    except Exception:
+        logger.exception("Failed to classify regime for %s", symbol)
         return None

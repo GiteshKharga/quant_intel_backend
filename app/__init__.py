@@ -50,6 +50,11 @@ def create_app():
             logging.exception("configure_logging() failed")
 
     app = Flask(__name__, static_folder=None)
+    
+    # Register custom JSON provider
+    from app.json_provider import NumpyJSONProvider
+    app.json = NumpyJSONProvider(app)
+
     cfg = get_config()
     app.config.from_object(cfg)
 

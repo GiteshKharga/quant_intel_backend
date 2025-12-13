@@ -10,10 +10,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# create non-root user
-#RUN useradd -ms /bin/bash appuser
-#USER appuser
+# create non-root user for security
+RUN useradd -ms /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 8000
 
-CMD ["gunicorn", "app:create_app()", "-w", "4", "-b", "0.0.0.0:8000", "--timeout", "120"]
+# Production-ready Gunicorn with proper settings
+CMD ["gunicorn", "app:create_app()", "-w", "4", "-b", "0.0.0.0:8000", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]

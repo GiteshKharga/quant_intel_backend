@@ -46,32 +46,18 @@ except Exception:
 # ---------------------------------------------------------
 # OHLCV FETCHER
 # ---------------------------------------------------------
+from app.services.data_manager import fetch_stock_data
+
 def _fetch_ohlcv(symbol: str, period: str = "60d", interval: str = "1d") -> Optional[pd.DataFrame]:
-    try:
-        if _HAS_YFINANCE:
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period, interval=interval, auto_adjust=False)
-            if df is None or df.empty:
-                return None
-            df = df.rename(columns={
-                "Open": "open",
-                "High": "high",
-                "Low": "low",
-                "Close": "close",
-                "Volume": "volume",
-            })
-            return df[["open", "high", "low", "close", "volume"]]
+    """
+    Validation-wrapped data fetcher. 
+    Now delegates to the central robust Data Manager.
+    """
+    result = fetch_stock_data(symbol, period, interval)
+    if result.success:
+        return result.value
+    return None
 
-        elif _HAS_ALPACA:
-            return fetch_ohlcv_alpaca(symbol, timeframe=interval, limit=500)
-
-        else:
-            logger.warning("No market data provider available (yfinance or alpaca).")
-            return None
-
-    except Exception:
-        logger.exception("Failed to fetch OHLCV for %s", symbol)
-        return None
 
 
 # ---------------------------------------------------------
